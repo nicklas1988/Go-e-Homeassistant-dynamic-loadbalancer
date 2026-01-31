@@ -30,6 +30,7 @@ Detta dokument beskriver exakt vad automationen i `dynamicloadbalance.yaml` ska 
 - `step_a`: storlek på varje justeringssteg.
 - `increase_buffer_a`: extra marginal för att tillåta höjning.
 - `resume_buffer_a`: extra marginal för återupptag utöver minsta laddström.
+- `resume_cooldown_s`: minsta väntetid innan återupptag får ske (sekunder).
 - `increase_rate_limit_s`: minsta tid mellan höjningar.
 
 ## Beräknade värden
@@ -43,6 +44,7 @@ Detta dokument beskriver exakt vad automationen i `dynamicloadbalance.yaml` ska 
 - `is_connected`: true om `car_state` är `"connected"` eller `"charging"`.
 - `current_setpoint_a`: aktuellt inställt laddströmsvärde.
 - `seconds_since_last_raise`: sekunder sedan `input_datetime.go_e_last_raise`.
+- `seconds_since_auto_pause`: sekunder sedan `input_boolean.go_e_auto_paused` senast slogs på.
 - `next_setpoint_a_raw`:
   - Om `house_max_a > reduce_threshold_a`: sänk med `step_a`, aldrig under `min_ev_a`.
   - Om `house_max_a < (reduce_threshold_a - increase_buffer_a)`: höj med `step_a`, aldrig över `max_ev_a`.
@@ -70,6 +72,7 @@ Automationen ska återuppta laddning om **alla** villkor är uppfyllda:
 - `frc_state == "don't charge"`.
 - `house_max_a <= resume_threshold_a`.
 - `input_boolean.go_e_auto_paused` är on.
+- `seconds_since_auto_pause >= resume_cooldown_s`.
 
 Åtgärder:
 1. Sätt FRC‑läge till `Neutral`.
@@ -116,4 +119,3 @@ Logbook‑meddelanden ska skrivas vid:
 - Vid återupptag ska laddning alltid starta på `min_ev_a` (inte på en beräknad högre nivå).
 - Höjningar rate‑limitas; sänkningar gör det inte.
 - Om indata är `unknown/unavailable` tolkas de som 0 via `float(0)`.
-

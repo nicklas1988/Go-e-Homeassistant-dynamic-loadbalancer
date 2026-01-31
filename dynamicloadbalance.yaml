@@ -41,6 +41,10 @@ actions:
             value_template: "{{ (house_max_a | float(0)) <= (resume_threshold_a | float(0)) }}"
           - condition: template
             value_template: "{{ is_state('input_boolean.go_e_auto_paused','on') }}"
+          - condition: template
+            value_template: >-
+              {{ (seconds_since_auto_pause | float(0)) >= (resume_cooldown_s |
+              float(0)) }}
         sequence:
           - action: select.select_option
             target:
@@ -128,6 +132,7 @@ variables:
   pause_threshold_a: "{{ fuse_a }}"
   resume_buffer_a: 2
   resume_threshold_a: "{{ fuse_a - min_ev_a - resume_buffer_a }}"
+  resume_cooldown_s: 600
   increase_rate_limit_s: 15
   amp_number_entity: number.go_echarger_407894_amp
   frc_select_entity: select.go_echarger_407894_frc
@@ -149,6 +154,13 @@ variables:
     {% set v = states[frc_select_entity].last_changed if frc_select_entity in
     states else now() %} {{ (as_timestamp(now()) - as_timestamp(v)) | float(0)
     }}
+  seconds_since_auto_pause: >-
+    {% set e = 'input_boolean.go_e_auto_paused' %} {% if e in states and
+    is_state(e,'on') %}
+      {{ (as_timestamp(now()) - as_timestamp(states[e].last_changed)) | float(0) }}
+    {% else %}
+      999999
+    {% endif %}
   seconds_since_last_raise: >-
     {% set s = states('input_datetime.go_e_last_raise') %} {% if s in
     ['unknown','unavailable','none',''] %}
