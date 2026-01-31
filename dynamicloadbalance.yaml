@@ -1,0 +1,165 @@
+alias: Dynamisk strömbegränsare Go-e v3
+description: Dynamisk strömbegränsning + paus för go-eCharger 407894
+triggers:
+  - trigger: state
+    entity_id:
+      - sensor.current_phase_1
+      - sensor.current_phase_2
+      - sensor.current_phase_3
+    for: "00:00:03"
+  - trigger: time_pattern
+    seconds: /10
+conditions: []
+actions:
+  - choose:
+      - conditions:
+          - condition: template
+            value_template: "{{ is_connected }}"
+          - condition: template
+            value_template: "{{ (house_max_a | float(0)) >= (pause_threshold_a | float(0)) }}"
+          - condition: template
+            value_template: "{{ frc_state != \"don't charge\" }}"
+        sequence:
+          - action: select.select_option
+            target:
+              entity_id: select.go_echarger_407894_frc
+            data:
+              option: Don't charge
+          - action: input_boolean.turn_on
+            target:
+              entity_id: input_boolean.go_e_auto_paused
+          - action: logbook.log
+            data:
+              name: EV control
+              message: >-
+                PAUSAR laddning (max fas {{ house_max_a|round(1) }} A ≥ {{
+                pause_threshold_a }} A).
+      - conditions:
+          - condition: template
+            value_template: "{{ frc_state == \"don't charge\" }}"
+          - condition: template
+            value_template: "{{ (house_max_a | float(0)) <= (resume_threshold_a | float(0)) }}"
+          - condition: template
+            value_template: "{{ is_state('input_boolean.go_e_auto_paused','on') }}"
+        sequence:
+          - action: select.select_option
+            target:
+              entity_id: select.go_echarger_407894_frc
+            data:
+              option: Neutral
+          - delay: "00:00:03"
+          - action: number.set_value
+            target:
+              entity_id: "{{ amp_number_entity }}"
+            data:
+              value: "{{ min_ev_a }}"
+          - action: input_boolean.turn_off
+            target:
+              entity_id: input_boolean.go_e_auto_paused
+          - action: logbook.log
+            data:
+              name: EV control
+              message: >-
+                ÅTERUPPTAR laddning (auto). Max fas {{ house_max_a|round(1) }} A
+                ≤ {{ resume_threshold_a }} A.
+  - choose:
+      - conditions:
+          - condition: template
+            value_template: "{{ frc_state != \"don't charge\" }}"
+          - condition: template
+            value_template: "{{ is_charging }}"
+          - condition: template
+            value_template: "{{ (next_setpoint_a_raw | int) < (current_setpoint_a | int) }}"
+        sequence:
+          - action: number.set_value
+            target:
+              entity_id: "{{ amp_number_entity }}"
+            data:
+              value: "{{ next_setpoint_a_raw }}"
+          - action: logbook.log
+            data:
+              name: EV limit
+              message: >-
+                SÄNK till {{ next_setpoint_a_raw }} A (hus max {{
+                house_max_a|round(1) }} A).
+      - conditions:
+          - condition: template
+            value_template: "{{ frc_state != \"don't charge\" }}"
+          - condition: template
+            value_template: "{{ is_connected }}"
+          - condition: template
+            value_template: "{{ (next_setpoint_a_raw | int) > (current_setpoint_a | int) }}"
+          - condition: template
+            value_template: >-
+              {{ (house_max_a | float(0)) <= ((reduce_threshold_a | float(0)) -
+              (increase_buffer_a | float(0))) }}
+          - condition: template
+            value_template: >-
+              {{ (seconds_since_last_raise | float(0)) >= (increase_rate_limit_s
+              | float(0)) }}
+        sequence:
+          - action: number.set_value
+            target:
+              entity_id: "{{ amp_number_entity }}"
+            data:
+              value: "{{ next_setpoint_a_raw }}"
+          - action: input_datetime.set_datetime
+            target:
+              entity_id: input_datetime.go_e_last_raise
+            data:
+              datetime: "{{ now().strftime('%Y-%m-%d %H:%M:%S') }}"
+          - action: logbook.log
+            data:
+              name: EV limit
+              message: >-
+                HÖJ till {{ next_setpoint_a_raw }} A (hus max {{
+                house_max_a|round(2) }} A, Δt_last_raise={{
+                seconds_since_last_raise|int }} s, rate-limit={{
+                increase_rate_limit_s }} s).
+mode: restart
+variables:
+  fuse_a: 20
+  safety_margin_a: 3
+  min_ev_a: 6
+  max_ev_a: 10
+  step_a: 1
+  reduce_threshold_a: "{{ fuse_a - safety_margin_a }}"
+  increase_buffer_a: 2
+  pause_threshold_a: "{{ fuse_a }}"
+  resume_threshold_a: "{{ fuse_a - 2 }}"
+  increase_rate_limit_s: 15
+  amp_number_entity: number.go_echarger_407894_amp
+  frc_select_entity: select.go_echarger_407894_frc
+  car_state_sensor: sensor.go_echarger_407894_car
+  house_max_a: >-
+    {% set l1 = states('sensor.current_phase_1')|float(0) %} {% set l2 =
+    states('sensor.current_phase_2')|float(0) %} {% set l3 =
+    states('sensor.current_phase_3')|float(0) %} {{ [l1, l2, l3] | max }}
+  frc_state: "{{ states(frc_select_entity) | lower }}"
+  car_state: "{{ states(car_state_sensor) | lower }}"
+  is_charging: "{{ car_state in ['charging'] }}"
+  is_connected: "{{ car_state in ['connected','charging'] }}"
+  current_setpoint_a: "{{ states(amp_number_entity) | float(min_ev_a) }}"
+  seconds_since_frc_change: >-
+    {% set v = states[frc_select_entity].last_changed if frc_select_entity in
+    states else now() %} {{ (as_timestamp(now()) - as_timestamp(v)) | float(0)
+    }}
+  seconds_since_last_raise: >-
+    {% set s = states('input_datetime.go_e_last_raise') %} {% if s in
+    ['unknown','unavailable','none',''] %}
+      999999
+    {% else %}
+      {% set t = strptime(s, '%Y-%m-%d %H:%M:%S') %}
+      {{ (as_timestamp(now()) - as_timestamp(t)) | float(0) }}
+    {% endif %}
+  next_setpoint_a_raw: >-
+    {% set over_down = house_max_a > (reduce_threshold_a|float) %} {% set
+    under_up  = house_max_a < ((reduce_threshold_a|float) -
+    (increase_buffer_a|float)) %} {% if over_down %}
+      {{ [current_setpoint_a - step_a, min_ev_a] | max | int }}
+    {% elif under_up %}
+      {{ [current_setpoint_a + step_a, max_ev_a] | min | int }}
+    {% else %}
+      {{ current_setpoint_a | int }}
+    {% endif %}
+
