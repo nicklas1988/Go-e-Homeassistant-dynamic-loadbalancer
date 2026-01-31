@@ -119,3 +119,8 @@ Logbook‑meddelanden ska skrivas vid:
 - Vid återupptag ska laddning alltid starta på `min_ev_a` (inte på en beräknad högre nivå).
 - Höjningar rate‑limitas; sänkningar gör det inte.
 - Om indata är `unknown/unavailable` tolkas de som 0 via `float(0)`.
+
+## Implementationsnot (läsbarhet)
+Själva YAML‑implementationen använder samlade “guard”‑variabler för villkoren:
+- `can_pause`, `can_resume`, `should_decrease`, `should_increase`.
+Detta ändrar inte beteendet, men gör villkoren lättare att läsa och återanvända.
