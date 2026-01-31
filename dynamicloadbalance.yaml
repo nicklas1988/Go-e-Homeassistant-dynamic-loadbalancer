@@ -18,13 +18,13 @@ actions:
           - condition: template
             value_template: "{{ (house_max_a | float(0)) >= (pause_threshold_a | float(0)) }}"
           - condition: template
-            value_template: "{{ frc_state != \"don't charge\" }}"
+            value_template: "{{ frc_state != frc_dont_charge_state }}"
         sequence:
           - action: select.select_option
             target:
               entity_id: select.go_echarger_407894_frc
             data:
-              option: Don't charge
+              option: "{{ frc_dont_charge_option }}"
           - action: input_boolean.turn_on
             target:
               entity_id: input_boolean.go_e_auto_paused
@@ -36,7 +36,7 @@ actions:
                 pause_threshold_a }} A).
       - conditions:
           - condition: template
-            value_template: "{{ frc_state == \"don't charge\" }}"
+            value_template: "{{ frc_state == frc_dont_charge_state }}"
           - condition: template
             value_template: "{{ (house_max_a | float(0)) <= (resume_threshold_a | float(0)) }}"
           - condition: template
@@ -46,7 +46,7 @@ actions:
             target:
               entity_id: select.go_echarger_407894_frc
             data:
-              option: Neutral
+              option: "{{ frc_neutral_option }}"
           - delay: "00:00:03"
           - action: number.set_value
             target:
@@ -65,7 +65,7 @@ actions:
   - choose:
       - conditions:
           - condition: template
-            value_template: "{{ frc_state != \"don't charge\" }}"
+            value_template: "{{ frc_state != frc_dont_charge_state }}"
           - condition: template
             value_template: "{{ is_charging }}"
           - condition: template
@@ -84,7 +84,7 @@ actions:
                 house_max_a|round(1) }} A).
       - conditions:
           - condition: template
-            value_template: "{{ frc_state != \"don't charge\" }}"
+            value_template: "{{ frc_state != frc_dont_charge_state }}"
           - condition: template
             value_template: "{{ is_connected }}"
           - condition: template
@@ -126,7 +126,8 @@ variables:
   reduce_threshold_a: "{{ fuse_a - safety_margin_a }}"
   increase_buffer_a: 2
   pause_threshold_a: "{{ fuse_a }}"
-  resume_threshold_a: "{{ fuse_a - 2 }}"
+  resume_buffer_a: 2
+  resume_threshold_a: "{{ fuse_a - min_ev_a - resume_buffer_a }}"
   increase_rate_limit_s: 15
   amp_number_entity: number.go_echarger_407894_amp
   frc_select_entity: select.go_echarger_407894_frc
@@ -135,6 +136,10 @@ variables:
     {% set l1 = states('sensor.current_phase_1')|float(0) %} {% set l2 =
     states('sensor.current_phase_2')|float(0) %} {% set l3 =
     states('sensor.current_phase_3')|float(0) %} {{ [l1, l2, l3] | max }}
+  frc_dont_charge_state: "don't charge"
+  frc_neutral_state: "neutral"
+  frc_dont_charge_option: "Don't charge"
+  frc_neutral_option: "Neutral"
   frc_state: "{{ states(frc_select_entity) | lower }}"
   car_state: "{{ states(car_state_sensor) | lower }}"
   is_charging: "{{ car_state in ['charging'] }}"
@@ -162,4 +167,3 @@ variables:
     {% else %}
       {{ current_setpoint_a | int }}
     {% endif %}
-
