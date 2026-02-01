@@ -1,4 +1,4 @@
-alias: Dynamisk strömbegränsare Go-e v3
+alias: Dynamisk strömbegränsare Go-e v4
 description: Dynamisk strömbegränsning + paus för go-eCharger 407894
 triggers:
   - trigger: state
@@ -111,6 +111,9 @@ variables:
   car_state_sensor: sensor.go_echarger_407894_car
   auto_pause_entity: input_boolean.go_e_auto_paused
   last_raise_entity: input_datetime.go_e_last_raise
+  phase_1_sensor: sensor.current_phase_1
+  phase_2_sensor: sensor.current_phase_2
+  phase_3_sensor: sensor.current_phase_3
 
   # FRC strings
   frc_dont_charge_state: "don't charge"
@@ -123,10 +126,17 @@ variables:
   resume_threshold_a: "{{ fuse_a - min_ev_a - resume_buffer_a }}"
 
   # Measurements
+  phase_1_state: "{{ states(phase_1_sensor) }}"
+  phase_2_state: "{{ states(phase_2_sensor) }}"
+  phase_3_state: "{{ states(phase_3_sensor) }}"
+  house_sensors_ok: >-
+    {{ phase_1_state not in ['unknown','unavailable','none',''] and
+       phase_2_state not in ['unknown','unavailable','none',''] and
+       phase_3_state not in ['unknown','unavailable','none',''] }}
   house_max_a: >-
-    {% set l1 = states('sensor.current_phase_1') | float(0) %}
-    {% set l2 = states('sensor.current_phase_2') | float(0) %}
-    {% set l3 = states('sensor.current_phase_3') | float(0) %}
+    {% set l1 = states(phase_1_sensor) | float(0) %}
+    {% set l2 = states(phase_2_sensor) | float(0) %}
+    {% set l3 = states(phase_3_sensor) | float(0) %}
     {{ [l1, l2, l3] | max }}
   house_max_a_f: "{{ house_max_a | float(0) }}"
   frc_state: "{{ states(frc_select_entity) | lower }}"
@@ -168,13 +178,17 @@ variables:
 
   # Action guards (single source of truth for conditions)
   can_pause: >-
-    {{ is_connected and is_not_paused and (house_max_a_f >= (pause_threshold_a | float(0))) }}
+    {{ house_sensors_ok and is_connected and is_not_paused and
+       (house_max_a_f >= (pause_threshold_a | float(0))) }}
   can_resume: >-
-    {{ is_paused and is_auto_paused and (house_max_a_f <= (resume_threshold_a | float(0))) and
+    {{ house_sensors_ok and is_paused and is_auto_paused and
+       (house_max_a_f <= (resume_threshold_a | float(0))) and
        (seconds_since_auto_pause >= (resume_cooldown_s | float(0))) }}
   should_decrease: >-
-    {{ is_not_paused and is_charging and ((next_setpoint_a_raw | int) < (current_setpoint_a | int)) }}
+    {{ house_sensors_ok and is_not_paused and is_charging and
+       ((next_setpoint_a_raw | int) < (current_setpoint_a | int)) }}
   should_increase: >-
-    {{ is_not_paused and is_connected and ((next_setpoint_a_raw | int) > (current_setpoint_a | int)) and
+    {{ house_sensors_ok and is_not_paused and is_connected and
+       ((next_setpoint_a_raw | int) > (current_setpoint_a | int)) and
        (house_max_a_f <= ((reduce_threshold_a | float(0)) - (increase_buffer_a | float(0)))) and
        (seconds_since_last_raise >= (increase_rate_limit_s | float(0))) }}

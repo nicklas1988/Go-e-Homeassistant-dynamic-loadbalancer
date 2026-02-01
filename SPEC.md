@@ -119,6 +119,8 @@ Logbook‑meddelanden ska skrivas vid:
 - Vid återupptag ska laddning alltid starta på `min_ev_a` (inte på en beräknad högre nivå).
 - Höjningar rate‑limitas; sänkningar gör det inte.
 - Om indata är `unknown/unavailable` tolkas de som 0 via `float(0)`.
+- Åtgärder utförs endast när alla tre fas‑sensorer har giltiga värden
+  (dvs inte `unknown/unavailable/none/''`).
 
 ## Implementationsnot (läsbarhet)
 Själva YAML‑implementationen använder samlade “guard”‑variabler för villkoren:
