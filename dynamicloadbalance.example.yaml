@@ -1,5 +1,5 @@
 alias: Dynamisk strömbegränsare Go-e v4
-description: Dynamisk strömbegränsning + paus för go-eCharger 407894
+description: Dynamisk strömbegränsning + paus för go-eCharger
 triggers:
   - trigger: state
     entity_id:
@@ -106,9 +106,9 @@ variables:
   increase_rate_limit_s: 15
 
   # Entities
-  amp_number_entity: number.go_echarger_407894_amp
-  frc_select_entity: select.go_echarger_407894_frc
-  car_state_sensor: sensor.go_echarger_407894_car
+  amp_number_entity: number.go_echarger_xxxxxx_amp
+  frc_select_entity: select.go_echarger_xxxxxx_frc
+  car_state_sensor: sensor.go_echarger_xxxxxx_car
   auto_pause_entity: input_boolean.go_e_auto_paused
   last_raise_entity: input_datetime.go_e_last_raise
   phase_1_sensor: sensor.current_phase_1

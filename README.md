@@ -16,11 +16,12 @@ Se `SPEC.md` för exakt beteende.
 - `input_datetime` för senaste höjning.
 
 ## Snabbstart
-1. Kopiera `dynamicloadbalance.yaml` till dina automationer (eller använd packages).
-2. Uppdatera entitets‑ID:n i variablerna så att de matchar din installation.
-3. Skapa nödvändiga `input_*`‑entiteter (se lista nedan).
-4. Justera parametrar som `fuse_a`, `min_ev_a`, `max_ev_a`, `resume_buffer_a`.
-5. Ladda om automationer i Home Assistant.
+1. Kopiera `dynamicloadbalance.example.yaml` till `dynamicloadbalance.yaml`.
+2. Importera `dynamicloadbalance.yaml` i dina automationer (eller använd packages).
+3. Uppdatera entitets‑ID:n i variablerna så att de matchar din installation.
+4. Skapa nödvändiga `input_*`‑entiteter (se lista nedan).
+5. Justera parametrar som `fuse_a`, `min_ev_a`, `max_ev_a`, `resume_buffer_a`.
+6. Ladda om automationer i Home Assistant.
 
 ## Entiteter du behöver
 Uppdatera variablerna i YAML:
