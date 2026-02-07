@@ -142,6 +142,9 @@ Logbook‑meddelanden ska skrivas vid:
 - sänkning,
 - höjning.
 
+Alla `logbook.log`‑anrop inkluderar `entity_id: amp_number_entity` så att posterna
+kopplas till laddströmsentiteten och kan filtreras i logbook‑kort på dashboards.
+
 ## Körläge
 - `mode: restart` innebär att en ny trigger avbryter och startar om automationen.
 

@@ -1,0 +1,171 @@
+views:
+  - type: sections
+    max_columns: 4
+    title: EV Laddning
+    path: ev-laddning
+    icon: mdi:ev-plug-type2
+    sections:
+      - type: grid
+        column_span: 4
+        cards:
+          - type: entities
+            entities:
+              - entity: sensor.go_echarger_xxxxxx_car
+                name: Bilstatus
+              - entity: sensor.go_echarger_xxxxxx_modelstatus
+                name: Laddarstatus
+              - entity: sensor.go_echarger_xxxxxx_err
+                name: Felkod
+              - entity: input_boolean.go_e_auto_paused
+                name: Auto-pausad
+              - entity: input_datetime.go_e_last_raise
+              - entity: input_datetime.go_e_overload_start
+            grid_options:
+              columns: 15
+              rows: auto
+            state_color: false
+            show_header_toggle: false
+            title: Status
+          - type: entities
+            entities:
+              - entity: number.go_echarger_xxxxxx_amp
+                name: Börvärde
+              - entity: number.go_echarger_xxxxxx_ama
+                name: Max ampere
+              - entity: select.go_echarger_xxxxxx_frc
+                name: FRC-läge
+              - entity: select.go_echarger_xxxxxx_psm
+                name: Fasläge
+              - entity: select.go_echarger_xxxxxx_lmo
+                name: Laddläge
+              - entity: select.go_echarger_xxxxxx_ust
+                name: Kabelkapacitet
+            grid_options:
+              columns: 18
+              rows: auto
+            title: Kontroll
+      - type: grid
+        column_span: 2
+        cards: []
+      - type: grid
+        column_span: 4
+        cards:
+          - type: heading
+            heading: Automationslogg
+            heading_style: title
+          - type: logbook
+            entities:
+              - number.go_echarger_xxxxxx_amp
+            hours_to_show: 12
+            grid_options:
+              columns: full
+      - type: grid
+        column_span: 4
+        cards:
+          - type: heading
+            heading: Husström
+            heading_style: title
+          - type: history-graph
+            hours_to_show: 12
+            entities:
+              - entity: sensor.current_phase_1
+                name: Fas 1 (A)
+              - entity: sensor.current_phase_2
+                name: Fas 2 (A)
+              - entity: sensor.current_phase_3
+                name: Fas 3 (A)
+            grid_options:
+              columns: full
+          - type: history-graph
+            hours_to_show: 12
+            entities:
+              - entity: sensor.momentary_active_import
+                name: Totalt (W)
+              - entity: sensor.momentary_active_import_phase_1
+                name: Fas 1 (W)
+              - entity: sensor.momentary_active_import_phase_2
+                name: Fas 2 (W)
+              - entity: sensor.momentary_active_import_phase_3
+                name: Fas 3 (W)
+            grid_options:
+              columns: full
+      - type: grid
+        column_span: 4
+        cards:
+          - type: heading
+            heading: Laddarström
+            heading_style: title
+          - type: history-graph
+            hours_to_show: 12
+            entities:
+              - entity: sensor.go_echarger_xxxxxx_nrg_12
+                name: Total effekt (kW)
+              - entity: sensor.go_echarger_xxxxxx_nrg_8
+                name: Effekt L1 (kW)
+              - entity: sensor.go_echarger_xxxxxx_nrg_9
+                name: Effekt L2 (kW)
+              - entity: sensor.go_echarger_xxxxxx_nrg_10
+                name: Effekt L3 (kW)
+            grid_options:
+              columns: full
+          - type: history-graph
+            hours_to_show: 12
+            entities:
+              - entity: sensor.go_echarger_xxxxxx_nrg_5
+                name: Laddare L1 (A)
+              - entity: sensor.go_echarger_xxxxxx_nrg_6
+                name: Laddare L2 (A)
+              - entity: sensor.go_echarger_xxxxxx_nrg_7
+                name: Laddare L3 (A)
+            grid_options:
+              columns: full
+          - type: history-graph
+            hours_to_show: 12
+            entities:
+              - entity: number.go_echarger_xxxxxx_amp
+                name: Börvärde (A)
+            grid_options:
+              columns: full
+      - type: grid
+        column_span: 1
+        cards:
+          - type: entities
+            entities:
+              - entity: sensor.go_echarger_xxxxxx_tma
+                name: Temperatur 1
+              - entity: sensor.go_echarger_xxxxxx_tma_2
+                name: Temperatur 2
+              - entity: sensor.go_echarger_xxxxxx_loa
+                name: Lastbalansering
+              - entity: sensor.go_echarger_xxxxxx_nrg
+                name: Spänning L1
+              - entity: sensor.go_echarger_xxxxxx_nrg_2
+                name: Spänning L2
+              - entity: sensor.go_echarger_xxxxxx_nrg_3
+                name: Spänning L3
+              - entity: sensor.go_echarger_xxxxxx_nrg_13
+                name: Effektfaktor L1
+              - entity: sensor.go_echarger_xxxxxx_nrg_14
+                name: Effektfaktor L2
+              - entity: sensor.go_echarger_xxxxxx_nrg_15
+                name: Effektfaktor L3
+            grid_options:
+              columns: full
+            title: Diagnostik
+      - type: grid
+        column_span: 1
+        cards:
+          - type: entities
+            entities:
+              - entity: sensor.go_echarger_xxxxxx_wh
+                name: Session
+              - entity: sensor.go_echarger_xxxxxx_eto
+                name: Totalt förbrukad
+              - entity: sensor.go_echarger_xxxxxx_ate
+                name: Energigräns
+              - entity: sensor.go_echarger_xxxxxx_att
+                name: Tidsgräns
+            grid_options:
+              columns: full
+            title: Energi
+    cards: []

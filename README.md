@@ -55,10 +55,10 @@ Skapa manuellt i HA om de saknas:
 en YAML‑dashboard i HA eller kopiera sektionerna till en befintlig dashboard.
 
 Sektioner:
-- **Status & kontroll** — bilstatus, FRC‑läge, börvärde, auto‑pausad, överbelastning.
-- **Laddarinställningar** — max ampere, laddläge, fasläge, temperaturer.
+- **Status** — bilstatus, laddarstatus, felkod, auto‑pausad, tidsstämplar.
+- **Kontroll** — börvärde, max ampere, FRC‑läge, fasläge, laddläge, kabelkapacitet.
 - **Automationslogg** — senaste logbook‑poster från automationen.
 - **Husström** — grafer för fasströmmar (A) och effekt per fas (W).
-- **Laddarström** — grafer för laddarens ström (A) och effekt (kW) per fas.
+- **Laddarström** — grafer för effekt (kW), ström (A) per fas och börvärde över tid.
+- **Diagnostik** — temperaturer, lastbalansering, spänning, effektfaktor.
 - **Energi** — session, totalt förbrukad, energi‑ och tidsgränser.
-- **Spänning & effektfaktor** — spänning och power factor per fas.
