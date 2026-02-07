@@ -19,9 +19,11 @@ views:
               - entity: input_boolean.go_e_auto_paused
                 name: Auto-pausad
               - entity: input_datetime.go_e_last_raise
+                name: Senaste höjningen
               - entity: input_datetime.go_e_overload_start
+                secondary_info: none
+                name: Senast över huvudsäkring
             grid_options:
-              columns: 15
               rows: auto
             state_color: false
             show_header_toggle: false

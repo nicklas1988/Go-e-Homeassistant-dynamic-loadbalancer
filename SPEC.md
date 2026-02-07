@@ -124,7 +124,7 @@ Automationen ska sänka laddström om **alla** villkor är uppfyllda:
 ### Höj laddström
 Automationen ska höja laddström om **alla** villkor är uppfyllda:
 - `frc_state != "don't charge"`.
-- `is_connected` är true.
+- `is_charging` är true (höjning sker bara vid aktiv laddning, inte vid t.ex. "complete").
 - `next_setpoint_a_raw > current_setpoint_a`.
 - `house_max_a <= (reduce_threshold_a - increase_buffer_a)`.
 - `seconds_since_last_raise >= increase_rate_limit_s`.

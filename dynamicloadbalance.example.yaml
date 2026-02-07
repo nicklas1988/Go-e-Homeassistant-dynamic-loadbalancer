@@ -247,7 +247,7 @@ variables:
        not is_overloaded and
        ((next_setpoint_a_raw | int) < (current_setpoint_a | int)) }}
   should_increase: >-
-    {{ house_sensors_ok and is_not_paused and is_connected and
+    {{ house_sensors_ok and is_not_paused and is_charging and
        ((next_setpoint_a_raw | int) > (current_setpoint_a | int)) and
        (house_max_a_f <= ((reduce_threshold_a | float(0)) - (increase_buffer_a | float(0)))) and
        (seconds_since_last_raise >= (increase_rate_limit_s | float(0))) }}
