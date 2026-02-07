@@ -1,9 +1,10 @@
-# Specifikation: Dynamisk strömbegränsare Go-e v3
+# Specifikation: Dynamisk strömbegränsare Go-e v5
 
 Detta dokument beskriver exakt vad automationen i `dynamicloadbalance.yaml` ska göra.
 
 ## Syfte
 - Säkerställa att husets säkring inte överbelastas genom att pausa eller sänka EV‑laddning.
+- Vid överbelastning, först försöka **nödsänka** laddströmmen i ett steg innan paus.
 - Återuppta laddning när det finns tillräcklig marginal.
 - Justera laddström i små steg upp/ner baserat på aktuell husbelastning.
 
@@ -13,6 +14,7 @@ Detta dokument beskriver exakt vad automationen i `dynamicloadbalance.yaml` ska 
 - `select.go_echarger_407894_frc` (FRC‑läge för laddaren).
 - `number.go_echarger_407894_amp` (aktuellt inställt laddströmvärde).
 - `input_datetime.go_e_last_raise` (tidpunkt för senaste höjning).
+- `input_datetime.go_e_overload_start` (tidpunkt då överbelastning upptäcktes).
 - `input_boolean.go_e_auto_paused` (markerar att paus gjorts av automationen).
 
 ## Utgångar (entiteter som skrivs)
@@ -21,6 +23,7 @@ Detta dokument beskriver exakt vad automationen i `dynamicloadbalance.yaml` ska 
 - Sätter `input_boolean.go_e_auto_paused` on/off.
 - Skriver loggar via `logbook.log`.
 - Uppdaterar `input_datetime.go_e_last_raise`.
+- Uppdaterar `input_datetime.go_e_overload_start`.
 
 ## Konstanter/parametrar
 - `fuse_a`: säkringsstorlek i A.
@@ -32,6 +35,7 @@ Detta dokument beskriver exakt vad automationen i `dynamicloadbalance.yaml` ska 
 - `resume_buffer_a`: extra marginal för återupptag utöver minsta laddström.
 - `resume_cooldown_s`: minsta väntetid innan återupptag får ske (sekunder).
 - `increase_rate_limit_s`: minsta tid mellan höjningar.
+- `overload_timeout_s`: hur länge nödsänkning får pågå innan paus utlöses (sekunder).
 
 ## Beräknade värden
 - `house_max_a`: maxvärde av L1/L2/L3.
@@ -45,6 +49,12 @@ Detta dokument beskriver exakt vad automationen i `dynamicloadbalance.yaml` ska 
 - `current_setpoint_a`: aktuellt inställt laddströmsvärde.
 - `seconds_since_last_raise`: sekunder sedan `input_datetime.go_e_last_raise`.
 - `seconds_since_auto_pause`: sekunder sedan `input_boolean.go_e_auto_paused` senast slogs på.
+- `is_overloaded`: true om `house_max_a_f >= pause_threshold_a`.
+- `excess_a`: `max(house_max_a_f - reduce_threshold_a, 0)` — hur mycket vi överstiger sänktröskeln.
+- `safe_setpoint_a`: `max(floor(current_setpoint_a - excess_a), min_ev_a)` — högsta säkra ampere‑värde.
+- `seconds_since_overload_start`: sekunder sedan `input_datetime.go_e_overload_start`.
+- `overload_start_is_stale`: true om `seconds_since_overload_start > overload_timeout_s + 10` eller entiteten saknar giltigt värde.
+- `overload_timed_out`: true om överbelastad OCH ej stale OCH `>= overload_timeout_s`.
 - `next_setpoint_a_raw`:
   - Om `house_max_a > reduce_threshold_a`: sänk med `step_a`, aldrig under `min_ev_a`.
   - Om `house_max_a < (reduce_threshold_a - increase_buffer_a)`: höj med `step_a`, aldrig över `max_ev_a`.
@@ -55,17 +65,35 @@ Automationen ska köras när:
 - någon av fasströmmarna ändras och har varit stabil i 3 sekunder, eller
 - var 10:e sekund.
 
-## Beteende: paus/återuppta (först i actions)
+## Beteende: paus/nödsänkning/återuppta (först i actions)
 ### Pausa laddning
 Automationen ska pausa laddning om **alla** villkor är uppfyllda:
 - `is_connected` är true.
-- `house_max_a >= pause_threshold_a`.
+- `is_overloaded` är true.
 - `frc_state != "don't charge"`.
+- Minst ett av:
+  - `safe_setpoint_a < min_ev_a` (sänkning till säker nivå ej möjlig).
+  - `overload_timed_out` (överbelastningen har pågått i >= `overload_timeout_s` trots nödsänkning).
+  - `current_setpoint_a <= min_ev_a` och `is_overloaded` (redan på lägsta nivå, fortfarande överbelastad).
 
 Åtgärder:
 1. Sätt FRC‑läge till `Don't charge`.
 2. Sätt `input_boolean.go_e_auto_paused` till on.
 3. Logga i logbook att laddning pausas.
+
+### Nödsänkning
+Automationen ska nödsänka laddström om **alla** villkor är uppfyllda:
+- `is_connected` är true.
+- `is_overloaded` är true.
+- `frc_state != "don't charge"`.
+- `safe_setpoint_a >= min_ev_a` (sänkning till säker nivå är möjlig).
+- `current_setpoint_a > min_ev_a` (vi är inte redan på lägsta).
+- `overload_timed_out` är false (tidsgränsen ej nådd).
+
+Åtgärder:
+1. Sätt laddström till `safe_setpoint_a`.
+2. Om `overload_start_is_stale`: sätt `input_datetime.go_e_overload_start` till aktuell tid (ny överbelastningsepisod).
+3. Logga i logbook att nödsänkning skett.
 
 ### Återuppta laddning
 Automationen ska återuppta laddning om **alla** villkor är uppfyllda:
@@ -86,6 +114,7 @@ Automationen ska återuppta laddning om **alla** villkor är uppfyllda:
 Automationen ska sänka laddström om **alla** villkor är uppfyllda:
 - `frc_state != "don't charge"`.
 - `is_charging` är true.
+- `is_overloaded` är false (normal sänkning sker ej vid överbelastning — nödsänkning hanterar det).
 - `next_setpoint_a_raw < current_setpoint_a`.
 
 Åtgärder:
@@ -108,6 +137,7 @@ Automationen ska höja laddström om **alla** villkor är uppfyllda:
 ## Loggning
 Logbook‑meddelanden ska skrivas vid:
 - paus,
+- nödsänkning,
 - återupptag,
 - sänkning,
 - höjning.
@@ -118,11 +148,12 @@ Logbook‑meddelanden ska skrivas vid:
 ## Begränsningar och avsiktliga val
 - Vid återupptag ska laddning alltid starta på `min_ev_a` (inte på en beräknad högre nivå).
 - Höjningar rate‑limitas; sänkningar gör det inte.
+- Nödsänkning sker i ett enda steg till `safe_setpoint_a` (inte stegvis).
 - Om indata är `unknown/unavailable` tolkas de som 0 via `float(0)`.
 - Åtgärder utförs endast när alla tre fas‑sensorer har giltiga värden
   (dvs inte `unknown/unavailable/none/''`).
 
 ## Implementationsnot (läsbarhet)
-Själva YAML‑implementationen använder samlade “guard”‑variabler för villkoren:
-- `can_pause`, `can_resume`, `should_decrease`, `should_increase`.
+Själva YAML‑implementationen använder samlade "guard"‑variabler för villkoren:
+- `can_pause`, `can_emergency_reduce`, `can_resume`, `should_decrease`, `should_increase`.
 Detta ändrar inte beteendet, men gör villkoren lättare att läsa och återanvända.

@@ -1,4 +1,4 @@
-alias: Dynamisk strömbegränsare Go-e v4
+alias: Dynamisk strömbegränsare Go-e v5
 description: Dynamisk strömbegränsning + paus för go-eCharger
 triggers:
   - trigger: state
@@ -27,9 +27,35 @@ actions:
           - action: logbook.log
             data:
               name: EV control
+              entity_id: "{{ amp_number_entity }}"
               message: >-
                 PAUSAR laddning (max fas {{ house_max_a|round(1) }} A ≥ {{
                 pause_threshold_a }} A).
+      - conditions:
+          - condition: template
+            value_template: "{{ can_emergency_reduce }}"
+        sequence:
+          - action: number.set_value
+            target:
+              entity_id: "{{ amp_number_entity }}"
+            data:
+              value: "{{ safe_setpoint_a }}"
+          - if:
+              - condition: template
+                value_template: "{{ overload_start_is_stale }}"
+            then:
+              - action: input_datetime.set_datetime
+                target:
+                  entity_id: "{{ overload_start_entity }}"
+                data:
+                  datetime: "{{ now().strftime('%Y-%m-%d %H:%M:%S') }}"
+          - action: logbook.log
+            data:
+              name: EV control
+              entity_id: "{{ amp_number_entity }}"
+              message: >-
+                NÖDSÄNK till {{ safe_setpoint_a }} A (max fas
+                {{ house_max_a|round(1) }} A ≥ {{ pause_threshold_a }} A).
       - conditions:
           - condition: template
             value_template: "{{ can_resume }}"
@@ -51,6 +77,7 @@ actions:
           - action: logbook.log
             data:
               name: EV control
+              entity_id: "{{ amp_number_entity }}"
               message: >-
                 ÅTERUPPTAR laddning (auto). Max fas {{ house_max_a|round(1) }} A
                 ≤ {{ resume_threshold_a }} A.
@@ -67,6 +94,7 @@ actions:
           - action: logbook.log
             data:
               name: EV limit
+              entity_id: "{{ amp_number_entity }}"
               message: >-
                 SÄNK till {{ next_setpoint_a_raw }} A (hus max {{
                 house_max_a|round(1) }} A).
@@ -87,6 +115,7 @@ actions:
           - action: logbook.log
             data:
               name: EV limit
+              entity_id: "{{ amp_number_entity }}"
               message: >-
                 HÖJ till {{ next_setpoint_a_raw }} A (hus max {{
                 house_max_a|round(2) }} A, Δt_last_raise={{
@@ -104,6 +133,7 @@ variables:
   resume_buffer_a: 2
   resume_cooldown_s: 600
   increase_rate_limit_s: 15
+  overload_timeout_s: 20
 
   # Entities
   amp_number_entity: number.go_echarger_xxxxxx_amp
@@ -111,6 +141,7 @@ variables:
   car_state_sensor: sensor.go_echarger_xxxxxx_car
   auto_pause_entity: input_boolean.go_e_auto_paused
   last_raise_entity: input_datetime.go_e_last_raise
+  overload_start_entity: input_datetime.go_e_overload_start
   phase_1_sensor: sensor.current_phase_1
   phase_2_sensor: sensor.current_phase_2
   phase_3_sensor: sensor.current_phase_3
@@ -164,6 +195,24 @@ variables:
       {{ (as_timestamp(now()) - as_timestamp(t)) | float(0) }}
     {% endif %}
 
+  # Overload detection
+  is_overloaded: "{{ house_max_a_f >= (pause_threshold_a | float(0)) }}"
+  excess_a: "{{ [house_max_a_f - (reduce_threshold_a | float(0)), 0] | max }}"
+  safe_setpoint_a: "{{ [((current_setpoint_a | float) - (excess_a | float)) | int, min_ev_a | int] | max }}"
+  seconds_since_overload_start: >-
+    {% set s = states(overload_start_entity) %}
+    {% if s in ['unknown','unavailable','none',''] %}
+      999999
+    {% else %}
+      {% set t = strptime(s, '%Y-%m-%d %H:%M:%S') %}
+      {{ (as_timestamp(now()) - as_timestamp(t)) | float(0) }}
+    {% endif %}
+  overload_start_is_stale: >-
+    {{ (seconds_since_overload_start | float(999999)) > ((overload_timeout_s | float(20)) + 10) }}
+  overload_timed_out: >-
+    {{ is_overloaded and not overload_start_is_stale and
+       (seconds_since_overload_start | float(0)) >= (overload_timeout_s | float(20)) }}
+
   # Setpoint selection
   next_setpoint_a_raw: >-
     {% set over_down = house_max_a > (reduce_threshold_a | float(0)) %}
@@ -179,13 +228,23 @@ variables:
   # Action guards (single source of truth for conditions)
   can_pause: >-
     {{ house_sensors_ok and is_connected and is_not_paused and
-       (house_max_a_f >= (pause_threshold_a | float(0))) }}
+       is_overloaded and
+       ((safe_setpoint_a | int) < (min_ev_a | int) or
+        overload_timed_out or
+        ((current_setpoint_a | int) <= (min_ev_a | int) and is_overloaded)) }}
+  can_emergency_reduce: >-
+    {{ house_sensors_ok and is_connected and is_not_paused and
+       is_overloaded and
+       ((safe_setpoint_a | int) >= (min_ev_a | int)) and
+       ((current_setpoint_a | int) > (min_ev_a | int)) and
+       not overload_timed_out }}
   can_resume: >-
     {{ house_sensors_ok and is_paused and is_auto_paused and
        (house_max_a_f <= (resume_threshold_a | float(0))) and
        (seconds_since_auto_pause >= (resume_cooldown_s | float(0))) }}
   should_decrease: >-
     {{ house_sensors_ok and is_not_paused and is_charging and
+       not is_overloaded and
        ((next_setpoint_a_raw | int) < (current_setpoint_a | int)) }}
   should_increase: >-
     {{ house_sensors_ok and is_not_paused and is_connected and

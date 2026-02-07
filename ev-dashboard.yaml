@@ -1,0 +1,195 @@
+views:
+  - type: sections
+    max_columns: 4
+    title: EV Laddning
+    path: ev-laddning
+    icon: mdi:ev-plug-type2
+    sections:
+      # --- Status & kontroll ---
+      - type: grid
+        column_span: 2
+        cards:
+          - type: heading
+            heading: Status & kontroll
+            heading_style: title
+          - type: tile
+            entity: sensor.go_echarger_407894_car
+            name: Bilstatus
+          - type: tile
+            entity: binary_sensor.go_echarger_407894_car
+            name: Bil ansluten
+          - type: tile
+            entity: select.go_echarger_407894_frc
+            name: FRC-läge
+          - type: tile
+            entity: number.go_echarger_407894_amp
+            name: Laddström (börvärde)
+          - type: tile
+            entity: sensor.go_echarger_407894_modelstatus
+            name: Laddarstatus
+          - type: tile
+            entity: sensor.go_echarger_407894_err
+            name: Felkod
+          - type: tile
+            entity: input_boolean.go_e_auto_paused
+            name: Auto-pausad
+          - type: tile
+            entity: input_datetime.go_e_overload_start
+            name: Överbelastning start
+          - type: tile
+            entity: input_datetime.go_e_last_raise
+            name: Senaste höjning
+
+      # --- Laddarinställningar ---
+      - type: grid
+        column_span: 2
+        cards:
+          - type: heading
+            heading: Laddarinställningar
+            heading_style: title
+          - type: tile
+            entity: number.go_echarger_407894_ama
+            name: Max ampere
+          - type: tile
+            entity: select.go_echarger_407894_lmo
+            name: Laddläge
+          - type: tile
+            entity: select.go_echarger_407894_ust
+            name: Kabelkap.
+          - type: tile
+            entity: select.go_echarger_407894_psm
+            name: Fasläge
+          - type: tile
+            entity: sensor.go_echarger_407894_loa
+            name: Lastbalansering A
+          - type: tile
+            entity: sensor.go_echarger_407894_tma
+            name: Temperatur 1
+          - type: tile
+            entity: sensor.go_echarger_407894_tma_2
+            name: Temperatur 2
+
+      # --- Automationslogg ---
+      - type: grid
+        column_span: 4
+        cards:
+          - type: heading
+            heading: Automationslogg
+            heading_style: title
+          - type: logbook
+            entities:
+              - number.go_echarger_407894_amp
+            hours_to_show: 12
+            grid_options:
+              columns: full
+
+      # --- Husström (grafer) ---
+      - type: grid
+        column_span: 4
+        cards:
+          - type: heading
+            heading: Husström
+            heading_style: title
+          - type: history-graph
+            hours_to_show: 12
+            entities:
+              - entity: sensor.current_phase_1
+                name: Fas 1 (A)
+              - entity: sensor.current_phase_2
+                name: Fas 2 (A)
+              - entity: sensor.current_phase_3
+                name: Fas 3 (A)
+            grid_options:
+              columns: full
+          - type: history-graph
+            hours_to_show: 12
+            entities:
+              - entity: sensor.momentary_active_import
+                name: Totalt (W)
+              - entity: sensor.momentary_active_import_phase_1
+                name: Fas 1 (W)
+              - entity: sensor.momentary_active_import_phase_2
+                name: Fas 2 (W)
+              - entity: sensor.momentary_active_import_phase_3
+                name: Fas 3 (W)
+            grid_options:
+              columns: full
+
+      # --- Laddarström (grafer) ---
+      - type: grid
+        column_span: 4
+        cards:
+          - type: heading
+            heading: Laddarström
+            heading_style: title
+          - type: history-graph
+            hours_to_show: 12
+            entities:
+              - entity: sensor.go_echarger_407894_nrg_5
+                name: Laddare L1 (A)
+              - entity: sensor.go_echarger_407894_nrg_6
+                name: Laddare L2 (A)
+              - entity: sensor.go_echarger_407894_nrg_7
+                name: Laddare L3 (A)
+            grid_options:
+              columns: full
+          - type: history-graph
+            hours_to_show: 12
+            entities:
+              - entity: sensor.go_echarger_407894_nrg_12
+                name: Total effekt (kW)
+              - entity: sensor.go_echarger_407894_nrg_8
+                name: Effekt L1 (kW)
+              - entity: sensor.go_echarger_407894_nrg_9
+                name: Effekt L2 (kW)
+              - entity: sensor.go_echarger_407894_nrg_10
+                name: Effekt L3 (kW)
+            grid_options:
+              columns: full
+
+      # --- Energi ---
+      - type: grid
+        column_span: 2
+        cards:
+          - type: heading
+            heading: Energi
+            heading_style: title
+          - type: tile
+            entity: sensor.go_echarger_407894_wh
+            name: Session (Wh)
+          - type: tile
+            entity: sensor.go_echarger_407894_eto
+            name: Totalt förbrukad (kWh)
+          - type: tile
+            entity: sensor.go_echarger_407894_ate
+            name: Energigräns
+          - type: tile
+            entity: sensor.go_echarger_407894_att
+            name: Tidsgräns
+
+      # --- Spänning & effektfaktor ---
+      - type: grid
+        column_span: 2
+        cards:
+          - type: heading
+            heading: Spänning & effektfaktor
+            heading_style: title
+          - type: tile
+            entity: sensor.go_echarger_407894_nrg
+            name: Spänning L1
+          - type: tile
+            entity: sensor.go_echarger_407894_nrg_2
+            name: Spänning L2
+          - type: tile
+            entity: sensor.go_echarger_407894_nrg_3
+            name: Spänning L3
+          - type: tile
+            entity: sensor.go_echarger_407894_nrg_13
+            name: PF L1
+          - type: tile
+            entity: sensor.go_echarger_407894_nrg_14
+            name: PF L2
+          - type: tile
+            entity: sensor.go_echarger_407894_nrg_15
+            name: PF L3
+    cards: []

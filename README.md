@@ -14,6 +14,7 @@ Se `SPEC.md` för exakt beteende.
   - Bilens status (sensor)
 - `input_boolean` för auto‑paus.
 - `input_datetime` för senaste höjning.
+- `input_datetime` för överbelastningsstart.
 
 ## Snabbstart
 1. Kopiera `dynamicloadbalance.example.yaml` till `dynamicloadbalance.yaml`.
@@ -31,10 +32,12 @@ Uppdatera variablerna i YAML:
 - `car_state_sensor`
 - `auto_pause_entity` (input_boolean)
 - `last_raise_entity` (input_datetime)
+- `overload_start_entity` (input_datetime)
 
 Skapa manuellt i HA om de saknas:
 - `input_boolean.go_e_auto_paused`
 - `input_datetime.go_e_last_raise`
+- `input_datetime.go_e_overload_start`
 
 ## Rekommenderade parametrar
 - `fuse_a`: storlek på huvudsäkring (A).
@@ -44,3 +47,18 @@ Skapa manuellt i HA om de saknas:
 - `resume_cooldown_s`: minsta väntetid före återupptag (s).
 - `increase_buffer_a`: extra marginal för höjning (A).
 - `increase_rate_limit_s`: minsta tid mellan höjningar (s).
+- `overload_timeout_s`: tid innan nödsänkning eskaleras till paus (s).
+
+## Dashboard
+
+`ev-dashboard.yaml` innehåller en vy för övervakning av laddningen. Importera den som
+en YAML‑dashboard i HA eller kopiera sektionerna till en befintlig dashboard.
+
+Sektioner:
+- **Status & kontroll** — bilstatus, FRC‑läge, börvärde, auto‑pausad, överbelastning.
+- **Laddarinställningar** — max ampere, laddläge, fasläge, temperaturer.
+- **Automationslogg** — senaste logbook‑poster från automationen.
+- **Husström** — grafer för fasströmmar (A) och effekt per fas (W).
+- **Laddarström** — grafer för laddarens ström (A) och effekt (kW) per fas.
+- **Energi** — session, totalt förbrukad, energi‑ och tidsgränser.
+- **Spänning & effektfaktor** — spänning och power factor per fas.
